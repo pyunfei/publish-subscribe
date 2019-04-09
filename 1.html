@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Page Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- <link rel="stylesheet" type="text/css" media="screen" href="main.css">
+    <script src="main.js"></script> -->
+
+    <script>
+           
+            class Vue {
+                constructor(options) {
+                    this.options = options;
+                    this.$data = options.data;//获取数据
+                    this.$el = document.querySelector(options.el);//获取对象
+                    this._directive = {};//保存订阅者
+                    this.Observer(this.$data);
+                    this.Compile(this.$el)
+                }
+                //数据劫持
+                Observer(data) {
+                    for (let key in data) {
+                        this._directive[key] = [];
+                        let Val = data[key];
+                        let Watch = this._directive[key];
+                        //数据劫持
+                        Object.defineProperty(this.$data, key, {
+                            get: function () {
+                                return Val;
+                            },
+                            set: function (newVal) {
+                                if (newVal !== Val) {
+                                    Val = newVal;
+                                    //在执行更新视图
+                                    Watch.forEach((element) => {
+                                        element.updata();
+                                    })
+                                }
+                            }
+                        })
+                    }
+                }
+                //解析指令
+                Compile(el) {
+                    let nodes = el.children;
+                    for (let i = 0; i < nodes.length; i++) {
+                        let node = nodes[i];
+                        this.Compile(node)
+                        if (node.hasAttribute("v-text")) {
+                            let attrVal = node.getAttribute("v-text")
+                            this._directive[attrVal].push(new Watcher(node, this, attrVal, "innerHTML"))
+                        }
+                        if (node.hasAttribute("v-model")) {
+                            let attrVal = node.getAttribute("v-model")
+                            this._directive[attrVal].push(new Watcher(node, this, attrVal, "value"))
+    
+                            node.addEventListener("input", (function () {
+                                return function () {
+                                    this.$data[attrVal] = node.value
+                                }
+                            })().bind(this))
+                        }
+                    }
+                }
+            }
+
+             // 订阅者
+             class Watcher {
+                constructor(el, vm, exp, attr) {
+                    this.el = el;
+                    this.vm = vm;
+                    this.exp = exp;
+                    this.attr = attr;
+                    this.updata()
+                }
+                updata() {
+                    this.$el[this.attr] = this.vm.$data[this.exp];
+                }
+            }
+    </script>
+</head>
+
+<body>
+    <div id="app">
+        <h1>数据响应式</h1>
+        <div>
+            <div v-text="myText"></div>
+            <div v-text="myBox"></div>
+            <input type="text" v-model="myText">
+        </div>
+    </div>
+
+    <script>
+        const app = new Vue({
+            el: "#app",
+            data:{
+                myText: "大吉大利,今晚吃鸡",
+                myBox: "局部变化，不影响全局变化"
+            }
+        })
+    </script>
+</body>
+
+</html>
